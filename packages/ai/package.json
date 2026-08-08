@@ -21,7 +21,7 @@
   "dependencies": {
     "@ai-job-market-intelligence/shared": "workspace:*",
     "@octokit/rest": "^22.0.1",
-    "openai": "^7.1.0",
+    "openai": "^7.4.0",
     "pdf-parse": "^2.4.5",
     "zod": "^3.23.8"
   },
