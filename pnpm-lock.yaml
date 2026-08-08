@@ -55,7 +55,7 @@ importers:
         version: 2.11.3(@prisma/client@6.19.3(prisma@6.19.3(typescript@5.9.3))(typescript@5.9.3))
       '@hookform/resolvers':
         specifier: ^5.5.7
-        version: 5.5.7(@standard-schema/spec@1.1.0)(effect@3.21.0)(react-hook-form@7.83.0(react@18.3.1))(zod@3.25.76)
+        version: 5.5.7(@standard-schema/spec@1.1.0)(effect@3.21.0)(react-hook-form@7.84.0(react@18.3.1))(zod@3.25.76)
       '@radix-ui/react-dialog':
         specifier: ^1.1.23
         version: 1.1.23(@types/react-dom@18.3.7(@types/react@18.3.31))(@types/react@18.3.31)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -111,8 +111,8 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
       react-hook-form:
-        specifier: ^7.83.0
-        version: 7.83.0(react@18.3.1)
+        specifier: ^7.84.0
+        version: 7.84.0(react@18.3.1)
       stripe:
         specifier: ^22.3.2
         version: 22.3.2(@types/node@20.19.43)
@@ -3692,8 +3692,8 @@ packages:
     peerDependencies:
       react: ^18.3.1
 
-  react-hook-form@7.83.0:
-    resolution: {integrity: sha512-AXt8cMCmx5a7u4uvpb2uRFVrWQhllI4pV+LSykxIac/hjt44TnQkmX9BKuQi2i+LDC62esmiLpilkav+kjVf/A==}
+  react-hook-form@7.84.0:
+    resolution: {integrity: sha512-+hWvQP6GLco56mDwrbU4XnHix8t1z90ltZsDIrREl+jnQFQxYLX8oAzqe/Xn8nHpmoXTY5M6oEXrAhbP1qevNQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -4496,10 +4496,10 @@ snapshots:
     dependencies:
       '@formatjs/fast-memoize': 3.1.7
 
-  '@hookform/resolvers@5.5.7(@standard-schema/spec@1.1.0)(effect@3.21.0)(react-hook-form@7.83.0(react@18.3.1))(zod@3.25.76)':
+  '@hookform/resolvers@5.5.7(@standard-schema/spec@1.1.0)(effect@3.21.0)(react-hook-form@7.84.0(react@18.3.1))(zod@3.25.76)':
     dependencies:
       '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.83.0(react@18.3.1)
+      react-hook-form: 7.84.0(react@18.3.1)
     optionalDependencies:
       '@standard-schema/spec': 1.1.0
       effect: 3.21.0
@@ -7423,7 +7423,7 @@ snapshots:
       react: 18.3.1
       scheduler: 0.23.2
 
-  react-hook-form@7.83.0(react@18.3.1):
+  react-hook-form@7.84.0(react@18.3.1):
     dependencies:
       react: 18.3.1
 
