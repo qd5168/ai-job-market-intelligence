@@ -21,6 +21,9 @@ const { mockQueueAdd, mockCollectQueueAdd } = vi.hoisted(() => ({
 const { mockStripInjectionText } = vi.hoisted(() => ({
   mockStripInjectionText: vi.fn(),
 }));
+const { mockRefreshEmbeddingHealth } = vi.hoisted(() => ({
+  mockRefreshEmbeddingHealth: vi.fn(),
+}));
 
 vi.mock('@ai-job-market-intelligence/db', () => ({
   upsertCompany: mockUpsertCompany,
@@ -45,6 +48,10 @@ vi.mock('@ai-job-market-intelligence/shared/security', () => ({
 
 vi.mock('../../queues/ingestion-collect.js', () => ({
   getIngestionCollectQueue: () => ({ add: mockCollectQueueAdd }),
+}));
+
+vi.mock('../../lib/embedding-health.js', () => ({
+  refreshEmbeddingHealth: mockRefreshEmbeddingHealth,
 }));
 
 vi.mock('../../logger.js', () => ({
@@ -85,6 +92,17 @@ beforeEach(() => {
   mockPrisma.job.updateMany.mockReset();
   mockStripInjectionText.mockReset();
   mockStripInjectionText.mockImplementation((text: string) => ({ cleaned: text, stripped: false }));
+  mockRefreshEmbeddingHealth.mockReset().mockResolvedValue(undefined);
+});
+
+describe('processIngestionCollect — embedding health refresh', () => {
+  it('refreshes embedding health on every invocation, regardless of source', async () => {
+    mockGetAdapterBySource.mockReturnValue(undefined);
+
+    await processIngestionCollect(makeJob({ source: 'REMOTEOK' }));
+
+    expect(mockRefreshEmbeddingHealth).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('processIngestionCollect — aggregator sources (RemoteOK/Himalayas)', () => {

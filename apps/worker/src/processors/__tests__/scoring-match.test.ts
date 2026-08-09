@@ -46,9 +46,9 @@ vi.mock('@ai-job-market-intelligence/db', () => ({
   upsertProfileEmbedding: mockUpsertProfileEmbedding,
 }));
 
-// toDecision/combineFinalScore are kept real (not mocked) so smoothing and
-// re-verification tests exercise the actual threshold/weighting logic
-// instead of duplicating it in test fixtures.
+// toDecision/computeFinalScore/getEmbeddingConfidence are kept real (not
+// mocked) so smoothing and re-verification tests exercise the actual
+// threshold/weighting logic instead of duplicating it in test fixtures.
 vi.mock('@ai-job-market-intelligence/ai', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@ai-job-market-intelligence/ai')>();
   return {
@@ -82,13 +82,14 @@ import { processScoringMatch } from '../scoring-match';
 const scoringResult = {
   score: 92,
   decision: 'APPLY' as const,
+  eligibility: 'ELIGIBLE' as const,
   reasoning: 'Great match',
   strengths: ['Node.js experience'],
   skillGap: [],
   llmScore: 95,
   embeddingScore: 90,
   ruleScore: 90,
-  scoringVersion: 'v3' as const,
+  scoringVersion: 'v4.1' as const,
 };
 
 function makeJob(data: { jobId: string; userId: string }) {

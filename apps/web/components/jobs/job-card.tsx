@@ -5,6 +5,7 @@ import { Link } from '@/i18n/navigation';
 import { ScoreRing } from './score-ring';
 import { SourceAttribution } from './source-attribution';
 import { ApplicationBadge } from './application-badge';
+import { EligibilityBadge } from './eligibility-badge';
 
 export function JobCard({ job }: { job: JobListItem }) {
   const t = useTranslations('jobs');
@@ -37,6 +38,9 @@ export function JobCard({ job }: { job: JobListItem }) {
           {job.postedAt && ` · ${timeAgo(job.postedAt)}`}
         </p>
         <div className="flex flex-wrap items-center gap-2">
+          <span className="pointer-events-none inline-block">
+            <EligibilityBadge eligibility={job.score.eligibility} />
+          </span>
           {job.tags.slice(0, 3).map((tag) => (
             <span key={tag} className="text-xs text-muted-foreground">
               {tag}

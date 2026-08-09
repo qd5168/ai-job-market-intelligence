@@ -60,6 +60,7 @@ export async function GET(request: Request) {
       score: {
         value: s.score,
         decision: s.decision,
+        eligibility: s.eligibility,
         reasoning: s.reasoning,
         strengths: s.strengths,
         skillGap: s.skillGap,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeRuleScore, regionPenalty, salaryPenalty } from '../rule-score';
+import { computeRuleScore, computeEligibility, salaryPenalty } from '../rule-score';
 import type { JobInput, ProfileInput } from '../../types';
 
 const job: JobInput = {
@@ -78,15 +78,16 @@ describe('computeRuleScore', () => {
     expect(computeRuleScore(profile, leveledJob)).toBe(20); // 0 (skill) + 5 (exp, far) + 15 (role)
   });
 
-  it('deducts the location ineligibility penalty from the additive score', () => {
-    // Same as the role-match case (20), minus the 40-point location penalty -> 0 (clamped)
+  it('does not deduct anything for currentCountry/eligibility — that is a separate signal now', () => {
+    // Same as the role-match case (20) — an INELIGIBLE region no longer
+    // touches rule_score at all (see computeEligibility below).
     const profile = {
       ...baseProfile,
       experienceYears: 100,
       preferredRoles: ['Backend Engineer'],
       currentCountry: 'US',
     };
-    expect(computeRuleScore(profile, { ...job, eligibleRegions: ['EU'] })).toBe(0);
+    expect(computeRuleScore(profile, { ...job, eligibleRegions: ['EU'] })).toBe(20);
   });
 
   it('deducts the salary mismatch penalty from the additive score', () => {
@@ -101,51 +102,50 @@ describe('computeRuleScore', () => {
   });
 });
 
-describe('regionPenalty', () => {
-  it('returns 0 when the user has not filled in currentCountry', () => {
-    expect(regionPenalty(baseProfile, { ...job, eligibleRegions: ['EU'] })).toBe(0);
+describe('computeEligibility', () => {
+  it('returns RESTRICTED when the user has not filled in currentCountry', () => {
+    expect(computeEligibility(baseProfile, { ...job, eligibleRegions: ['EU'] })).toBe('RESTRICTED');
   });
 
-  it('returns 0 when the job has no explicit region restriction', () => {
-    // US maps to the US bucket, see country-region-map.ts
+  it('returns RESTRICTED when the job has no explicit region signal', () => {
     const profile = { ...baseProfile, currentCountry: 'US' };
-    expect(regionPenalty(profile, job)).toBe(0);
+    expect(computeEligibility(profile, job)).toBe('RESTRICTED');
   });
 
-  it('returns 40 when the mapped bucket and eligible regions have no overlap', () => {
+  it('returns INELIGIBLE when the mapped bucket and eligible regions have no overlap', () => {
     const profile = { ...baseProfile, currentCountry: 'US' };
-    expect(regionPenalty(profile, { ...job, eligibleRegions: ['EU'] })).toBe(40);
+    expect(computeEligibility(profile, { ...job, eligibleRegions: ['EU'] })).toBe('INELIGIBLE');
   });
 
-  it('returns 0 when the mapped bucket overlaps', () => {
+  it('returns ELIGIBLE when the mapped bucket overlaps', () => {
     // DE -> EU bucket
     const profile = { ...baseProfile, currentCountry: 'DE' };
-    expect(regionPenalty(profile, { ...job, eligibleRegions: ['EU', 'UK'] })).toBe(0);
+    expect(computeEligibility(profile, { ...job, eligibleRegions: ['EU', 'UK'] })).toBe('ELIGIBLE');
   });
 
   it('prioritizes locationCountry over eligibleRegions when both are present', () => {
     const profile = { ...baseProfile, currentCountry: 'US' };
     // eligibleRegions says EU (would mismatch), but locationCountry is an
     // exact US match — locationCountry wins, no bucket mapping involved.
-    expect(regionPenalty(profile, { ...job, locationCountry: 'US', eligibleRegions: ['EU'] })).toBe(
-      0,
-    );
+    expect(
+      computeEligibility(profile, { ...job, locationCountry: 'US', eligibleRegions: ['EU'] }),
+    ).toBe('ELIGIBLE');
   });
 
-  it('penalizes an exact locationCountry mismatch even if it would map to an overlapping bucket', () => {
+  it('flags an exact locationCountry mismatch even if it would map to an overlapping bucket', () => {
     const profile = { ...baseProfile, currentCountry: 'DE' };
     // DE and FR both map to the EU bucket, but locationCountry is compared
     // as an exact country, not a bucket — FR !== DE.
-    expect(regionPenalty(profile, { ...job, locationCountry: 'FR', eligibleRegions: ['EU'] })).toBe(
-      40,
-    );
+    expect(
+      computeEligibility(profile, { ...job, locationCountry: 'FR', eligibleRegions: ['EU'] }),
+    ).toBe('INELIGIBLE');
   });
 
   it('falls back to eligibleRegions when locationCountry could not be resolved', () => {
     const profile = { ...baseProfile, currentCountry: 'US' };
-    expect(regionPenalty(profile, { ...job, locationCountry: null, eligibleRegions: ['EU'] })).toBe(
-      40,
-    );
+    expect(
+      computeEligibility(profile, { ...job, locationCountry: null, eligibleRegions: ['EU'] }),
+    ).toBe('INELIGIBLE');
   });
 });
 

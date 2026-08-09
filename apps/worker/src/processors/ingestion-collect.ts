@@ -15,6 +15,7 @@ import {
   INGESTION_PARSE_JOB_OPTS,
 } from '@ai-job-market-intelligence/shared/queue';
 import { logger } from '../logger.js';
+import { refreshEmbeddingHealth } from '../lib/embedding-health.js';
 import {
   getIngestionCollectQueue,
   type IngestionCollectPayload,
@@ -71,6 +72,11 @@ function sanitizeNormalized(
 export async function processIngestionCollect(job: Job<IngestionCollectPayload>): Promise<void> {
   const source = job.data.source as JobSource;
   const { companySlug } = job.data;
+
+  // Rides this cron's ~30min cadence rather than a dedicated queue — cheap
+  // (one capped query) and idempotent, so firing once per source's tick
+  // (a few times within any 30min window) is fine.
+  await refreshEmbeddingHealth();
 
   if (isPerCompanySource(source) && !companySlug) {
     await processBatchTrigger(job, source);

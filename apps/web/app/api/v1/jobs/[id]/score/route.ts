@@ -20,6 +20,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const data = ScoreResponseSchema.parse({
     score: score.score,
     decision: score.decision,
+    eligibility: score.eligibility,
     reasoning: score.reasoning,
     strengths: score.strengths,
     skillGap: score.skillGap,
