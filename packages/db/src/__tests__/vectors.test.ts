@@ -1,9 +1,17 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { prisma } from '../client';
-import { upsertJobEmbedding, findSimilarJobs, recordAlsoSeenOn } from '../vectors';
+import {
+  upsertJobEmbedding,
+  findSimilarJobs,
+  recordAlsoSeenOn,
+  getProfileEmbedding,
+  upsertProfileEmbedding,
+  clearProfileEmbedding,
+} from '../vectors';
 
 // Integration test against a real Postgres with pgvector.
 const TEST_EXTERNAL_ID_PREFIX = 'test-vectors-';
+const TEST_EMAIL_PREFIX = 'test-vectors-';
 
 function unitVector(dims: number, hotIndex: number): number[] {
   return Array.from({ length: dims }, (_, i) => (i === hotIndex ? 1 : 0));
@@ -14,7 +22,9 @@ function unitVector(dims: number, hotIndex: number): number[] {
 const BASE_EMBEDDING = Array.from({ length: 2048 }, (_, i) => (i < 100 ? 1 : 0));
 const NEAR_DUPLICATE_EMBEDDING = Array.from({ length: 2048 }, (_, i) => (i < 95 ? 1 : 0));
 
-async function createTestJob(overrides: Partial<Parameters<typeof prisma.job.create>[0]['data']> = {}) {
+async function createTestJob(
+  overrides: Partial<Parameters<typeof prisma.job.create>[0]['data']> = {},
+) {
   return prisma.job.create({
     data: {
       externalId: `${TEST_EXTERNAL_ID_PREFIX}${crypto.randomUUID()}`,
@@ -31,8 +41,19 @@ async function createTestJob(overrides: Partial<Parameters<typeof prisma.job.cre
   });
 }
 
+async function createTestProfile() {
+  const user = await prisma.user.create({
+    data: { email: `${TEST_EMAIL_PREFIX}${crypto.randomUUID()}@example.com` },
+  });
+  await prisma.userProfile.create({
+    data: { userId: user.id, skills: [], preferredRoles: [] },
+  });
+  return user.id;
+}
+
 afterAll(async () => {
   await prisma.job.deleteMany({ where: { externalId: { startsWith: TEST_EXTERNAL_ID_PREFIX } } });
+  await prisma.user.deleteMany({ where: { email: { startsWith: TEST_EMAIL_PREFIX } } });
   await prisma.$disconnect();
 });
 
@@ -77,6 +98,40 @@ describe('findSimilarJobs', () => {
   });
 });
 
+describe('getProfileEmbedding / upsertProfileEmbedding / clearProfileEmbedding', () => {
+  it('returns null when no embedding has been set yet', async () => {
+    const userId = await createTestProfile();
+
+    expect(await getProfileEmbedding(userId)).toBeNull();
+  });
+
+  it('round-trips a stored embedding', async () => {
+    const userId = await createTestProfile();
+
+    await upsertProfileEmbedding(userId, unitVector(2048, 0));
+
+    expect(await getProfileEmbedding(userId)).toEqual(unitVector(2048, 0));
+  });
+
+  it('overwrites a previously stored embedding', async () => {
+    const userId = await createTestProfile();
+
+    await upsertProfileEmbedding(userId, unitVector(2048, 0));
+    await upsertProfileEmbedding(userId, unitVector(2048, 1));
+
+    expect(await getProfileEmbedding(userId)).toEqual(unitVector(2048, 1));
+  });
+
+  it('clears a stored embedding back to null', async () => {
+    const userId = await createTestProfile();
+    await upsertProfileEmbedding(userId, unitVector(2048, 0));
+
+    await clearProfileEmbedding(userId);
+
+    expect(await getProfileEmbedding(userId)).toBeNull();
+  });
+});
+
 describe('recordAlsoSeenOn', () => {
   it('appends a new source to an empty alsoSeenOn list', async () => {
     const job = await createTestJob({ source: 'REMOTEOK' });
@@ -97,7 +152,7 @@ describe('recordAlsoSeenOn', () => {
     expect(updated.alsoSeenOn).toEqual(['GREENHOUSE']);
   });
 
-  it('is a no-op when the source matches the job\'s own canonical source', async () => {
+  it("is a no-op when the source matches the job's own canonical source", async () => {
     const job = await createTestJob({ source: 'REMOTEOK' });
 
     await recordAlsoSeenOn(job.id, 'REMOTEOK');
