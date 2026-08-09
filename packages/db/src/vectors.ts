@@ -18,10 +18,7 @@ function toVectorLiteral(embedding: number[]): string {
 }
 
 function parseVectorLiteral(raw: string): number[] {
-  return raw
-    .slice(1, -1)
-    .split(',')
-    .map(Number);
+  return raw.slice(1, -1).split(',').map(Number);
 }
 
 export async function getJobEmbedding(jobId: string): Promise<number[] | null> {
@@ -58,6 +55,17 @@ export async function upsertProfileEmbedding(userId: string, embedding: number[]
   await prisma.$executeRaw`
     UPDATE user_profiles SET profile_embedding = ${vector}::vector, updated_at = now()
     WHERE user_id = ${userId}
+  `;
+}
+
+// Called whenever a user edits their profile (skills, roles, etc.) so
+// scoring-match.ts's lazy "if (!profileEmbedding)" check regenerates it
+// against the new profile text on the next score, instead of silently
+// scoring every future job against a vector computed from a since-edited
+// profile forever.
+export async function clearProfileEmbedding(userId: string): Promise<void> {
+  await prisma.$executeRaw`
+    UPDATE user_profiles SET profile_embedding = NULL WHERE user_id = ${userId}
   `;
 }
 

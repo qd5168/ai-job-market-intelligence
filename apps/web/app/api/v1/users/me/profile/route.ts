@@ -1,5 +1,5 @@
 import { auth } from '@/lib/auth';
-import { prisma } from '@ai-job-market-intelligence/db';
+import { prisma, clearProfileEmbedding } from '@ai-job-market-intelligence/db';
 import { ProfileUpdateSchema, ProfileResponseSchema } from '@ai-job-market-intelligence/shared';
 import { apiSuccess, apiError } from '@/lib/api-response';
 import { enqueueRescoring } from '@/lib/queue';
@@ -32,6 +32,10 @@ export async function PUT(request: Request) {
     where: { id: session.user.id },
     data: { onboardingCompleted: true },
   });
+
+  // Manual profile edits bypass profile_parse, so force the next scoring run
+  // to regenerate the embedding from the latest profile text.
+  await clearProfileEmbedding(session.user.id);
 
   await enqueueRescoring(session.user.id, isNewOnboarding);
 
