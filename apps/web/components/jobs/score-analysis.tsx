@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScoreBadge } from './score-badge';
 import { DecisionBadge } from './decision-badge';
+import { EligibilityBadge } from './eligibility-badge';
 
 export function ScoreAnalysis({
   score,
@@ -13,6 +14,7 @@ export function ScoreAnalysis({
   isLoading: boolean;
 }) {
   const t = useTranslations('jobDetail');
+  const tEligibility = useTranslations('jobs.eligibility');
 
   if (isLoading) {
     return (
@@ -42,7 +44,11 @@ export function ScoreAnalysis({
           <ScoreBadge score={score.score} />
           <span className="text-sm text-muted-foreground">{t('outOf100')}</span>
           <DecisionBadge decision={score.decision} />
+          <EligibilityBadge eligibility={score.eligibility} />
         </div>
+        {score.eligibility === 'INELIGIBLE' && (
+          <p className="text-xs text-rose-700">{tEligibility('ineligibleHint')}</p>
+        )}
         <p className="text-sm">{score.reasoning}</p>
         {score.strengths.length > 0 && (
           <div>

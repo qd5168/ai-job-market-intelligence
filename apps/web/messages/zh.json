@@ -238,6 +238,12 @@
       "OFFER": "已录用",
       "REJECTED": "已拒绝",
       "WITHDRAWN": "已撤回"
+    },
+    "eligibility": {
+      "eligible": "地区符合",
+      "restricted": "地区未知",
+      "ineligible": "地区不符",
+      "ineligibleHint": "地区资格不匹配"
     }
   },
   "jobDetail": {

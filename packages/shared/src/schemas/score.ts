@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { JobDecisionSchema } from './job';
+import { JobDecisionSchema, JobEligibilitySchema } from './job';
 
 export const ScoreBreakdownSchema = z.object({
   llmScore: z.number(),
@@ -10,6 +10,7 @@ export const ScoreBreakdownSchema = z.object({
 export const ScoreResponseSchema = z.object({
   score: z.number().int(),
   decision: JobDecisionSchema,
+  eligibility: JobEligibilitySchema,
   reasoning: z.string(),
   strengths: z.array(z.string()),
   skillGap: z.array(z.string()),
