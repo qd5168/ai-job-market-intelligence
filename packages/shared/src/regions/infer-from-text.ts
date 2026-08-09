@@ -52,7 +52,7 @@ const DIRECT_BUCKET_PATTERNS: Array<{ pattern: RegExp; bucket: RegionBucket }> =
 // Trigger phrases that introduce a specific country name (e.g. "must be
 // based in Mexico") — the captured name is resolved through
 // i18n-iso-countries and mapped to a RegionBucket via the same lookup
-// scoring already uses for a user's preferredCountries.
+// scoring already uses for a user's currentCountry.
 const COUNTRY_TRIGGER_PATTERNS = [
   /\bmust be based (?:in|anywhere in)\s+([a-z][a-z .]{2,40}?)(?=[.,;]|\s+and\b|\s+a citizen\b|$)/gi,
   /\bmust be located in\s+([a-z][a-z .]{2,40}?)(?=[.,;]|$)/gi,

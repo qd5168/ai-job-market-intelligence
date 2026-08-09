@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { createZodErrorMap } from '@/lib/zod-error-map';
 import { TagInput } from './tag-input';
-import { CountrySelect } from './country-select';
+import { CurrentCountrySelect } from './current-country-select';
 import { SalaryInput } from './salary-input';
 import { fetchMe, updateProfile } from '@/lib/api/user';
 
@@ -37,7 +37,7 @@ export function ProfileForm() {
       skills: [],
       experienceYears: 0,
       preferredRoles: [],
-      preferredCountries: [],
+      currentCountry: null,
       expectedSalaryMin: null,
     },
   });
@@ -48,7 +48,7 @@ export function ProfileForm() {
         skills: me.profile.skills,
         experienceYears: me.profile.experienceYears,
         preferredRoles: me.profile.preferredRoles,
-        preferredCountries: me.profile.preferredCountries,
+        currentCountry: me.profile.currentCountry,
         expectedSalaryMin: me.profile.expectedSalaryMin,
       });
     }
@@ -117,18 +117,17 @@ export function ProfileForm() {
       </div>
 
       <div className="space-y-2">
-        <Label>{t('regionsLabel')}</Label>
+        <Label>{t('currentCountryLabel')}</Label>
         <Controller
           control={control}
-          name="preferredCountries"
+          name="currentCountry"
           render={({ field }) => (
-            <CountrySelect value={field.value ?? []} onChange={field.onChange} maxCountries={20} />
+            <CurrentCountrySelect value={field.value ?? null} onChange={field.onChange} />
           )}
         />
-        <p className="text-xs text-muted-foreground">{t('regionsHint')}</p>
-        <p className="text-xs text-muted-foreground">{t('regionsCoverageHint')}</p>
-        {errors.preferredCountries && (
-          <p className="text-sm text-destructive">{errors.preferredCountries.message}</p>
+        <p className="text-xs text-muted-foreground">{t('currentCountryHint')}</p>
+        {errors.currentCountry && (
+          <p className="text-sm text-destructive">{errors.currentCountry.message}</p>
         )}
       </div>
 

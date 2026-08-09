@@ -39,7 +39,7 @@ export async function PUT(request: Request) {
     skills: profile.skills,
     experienceYears: profile.experienceYears,
     preferredRoles: profile.preferredRoles,
-    preferredCountries: profile.preferredCountries,
+    currentCountry: profile.currentCountry,
     expectedSalaryMin: profile.expectedSalaryMin,
     updatedAt: profile.updatedAt.toISOString(),
   });

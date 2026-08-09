@@ -1,7 +1,7 @@
 import type { RegionBucket } from '../schemas/common';
 
 // Coarse country -> RegionBucket mapping used only to compare a user's
-// preferredCountries against a job's eligibleRegions (scoring rule R4).
+// currentCountry against a job's eligibleRegions (scoring rule R4).
 // REMOTE_GLOBAL/OTHER are never mapping targets a country resolves to on
 // purpose here — REMOTE_GLOBAL is a job-side "explicitly open worldwide"
 // signal, not a place; any country not in the sets below falls back to

@@ -18,7 +18,7 @@ const baseProfile: ProfileInput = {
   skills: [],
   experienceYears: 0,
   preferredRoles: [],
-  preferredCountries: [],
+  currentCountry: null,
   expectedSalaryMin: null,
 };
 
@@ -78,13 +78,13 @@ describe('computeRuleScore', () => {
     expect(computeRuleScore(profile, leveledJob)).toBe(20); // 0 (skill) + 5 (exp, far) + 15 (role)
   });
 
-  it('deducts the region mismatch penalty from the additive score', () => {
-    // Same as the role-match case (20), minus the 20-point region penalty -> 0 (clamped)
+  it('deducts the location ineligibility penalty from the additive score', () => {
+    // Same as the role-match case (20), minus the 40-point location penalty -> 0 (clamped)
     const profile = {
       ...baseProfile,
       experienceYears: 100,
       preferredRoles: ['Backend Engineer'],
-      preferredCountries: ['US'],
+      currentCountry: 'US',
     };
     expect(computeRuleScore(profile, { ...job, eligibleRegions: ['EU'] })).toBe(0);
   });
@@ -102,29 +102,29 @@ describe('computeRuleScore', () => {
 });
 
 describe('regionPenalty', () => {
-  it('returns 0 when the user has no country preference', () => {
+  it('returns 0 when the user has not filled in currentCountry', () => {
     expect(regionPenalty(baseProfile, { ...job, eligibleRegions: ['EU'] })).toBe(0);
   });
 
   it('returns 0 when the job has no explicit region restriction', () => {
     // US maps to the US bucket, see country-region-map.ts
-    const profile = { ...baseProfile, preferredCountries: ['US'] };
+    const profile = { ...baseProfile, currentCountry: 'US' };
     expect(regionPenalty(profile, job)).toBe(0);
   });
 
-  it('returns 20 when the mapped bucket and eligible regions have no overlap', () => {
-    const profile = { ...baseProfile, preferredCountries: ['US'] };
-    expect(regionPenalty(profile, { ...job, eligibleRegions: ['EU'] })).toBe(20);
+  it('returns 40 when the mapped bucket and eligible regions have no overlap', () => {
+    const profile = { ...baseProfile, currentCountry: 'US' };
+    expect(regionPenalty(profile, { ...job, eligibleRegions: ['EU'] })).toBe(40);
   });
 
-  it('returns 0 when at least one mapped bucket overlaps', () => {
-    // US -> US bucket, DE -> EU bucket
-    const profile = { ...baseProfile, preferredCountries: ['US', 'DE'] };
+  it('returns 0 when the mapped bucket overlaps', () => {
+    // DE -> EU bucket
+    const profile = { ...baseProfile, currentCountry: 'DE' };
     expect(regionPenalty(profile, { ...job, eligibleRegions: ['EU', 'UK'] })).toBe(0);
   });
 
   it('prioritizes locationCountry over eligibleRegions when both are present', () => {
-    const profile = { ...baseProfile, preferredCountries: ['US'] };
+    const profile = { ...baseProfile, currentCountry: 'US' };
     // eligibleRegions says EU (would mismatch), but locationCountry is an
     // exact US match — locationCountry wins, no bucket mapping involved.
     expect(regionPenalty(profile, { ...job, locationCountry: 'US', eligibleRegions: ['EU'] })).toBe(
@@ -133,18 +133,18 @@ describe('regionPenalty', () => {
   });
 
   it('penalizes an exact locationCountry mismatch even if it would map to an overlapping bucket', () => {
-    const profile = { ...baseProfile, preferredCountries: ['DE'] };
+    const profile = { ...baseProfile, currentCountry: 'DE' };
     // DE and FR both map to the EU bucket, but locationCountry is compared
     // as an exact country, not a bucket — FR !== DE.
     expect(regionPenalty(profile, { ...job, locationCountry: 'FR', eligibleRegions: ['EU'] })).toBe(
-      20,
+      40,
     );
   });
 
   it('falls back to eligibleRegions when locationCountry could not be resolved', () => {
-    const profile = { ...baseProfile, preferredCountries: ['US'] };
+    const profile = { ...baseProfile, currentCountry: 'US' };
     expect(regionPenalty(profile, { ...job, locationCountry: null, eligibleRegions: ['EU'] })).toBe(
-      20,
+      40,
     );
   });
 });

@@ -7,7 +7,7 @@ const EXPERIENCE_CLOSE_SCORE = 25;
 const EXPERIENCE_NEAR_SCORE = 15;
 const EXPERIENCE_FAR_SCORE = 5;
 const ROLE_MATCH_SCORE = 15;
-const REGION_MISMATCH_PENALTY = 20;
+const LOCATION_INELIGIBLE_PENALTY = 40;
 const SALARY_MISMATCH_PENALTY = 15;
 const HOURLY_HOURS_PER_YEAR = 2080;
 const MONTHS_PER_YEAR = 12;
@@ -75,28 +75,31 @@ export function computeRuleScore(profile: ProfileInput, job: JobInput): number {
   return Math.round(Math.min(100, Math.max(0, raw)));
 }
 
-// R4 region preference: a ranking-only deduction, not a
-// veto — preferredCountries expresses where the user *wants* to work, not
-// where they're eligible to work, so a mismatch still gets scored normally
-// and shown, just ranked lower. Two signals, most precise first:
+// R4 location eligibility: a ranking-only deduction, not a veto —
+// currentCountry answers "can I actually do this job", an objective fact
+// (e.g. a posting requiring "Remote, from Europe" isn't reachable by a user
+// actually based in China), not a subjective preference. A mismatch still
+// gets scored normally and shown, just ranked lower — companies
+// occasionally make exceptions (visa sponsorship etc.), so a flat penalty is
+// enough to sort it down without fully hiding it. Two signals, most precise
+// first:
 // 1. job.locationCountry — a single country deterministically parsed from
 //    the posting's own location text, compared directly against
-//    preferredCountries with no bucket mapping involved.
+//    currentCountry with no bucket mapping involved.
 // 2. job.eligibleRegions — JD-derived region buckets, used when
 //    locationCountry couldn't resolve to exactly one country (e.g. generic
 //    "Remote", or multiple countries listed).
 export function regionPenalty(profile: ProfileInput, job: JobInput): number {
-  if (profile.preferredCountries.length === 0) return 0; // no preference, don't check
+  if (!profile.currentCountry) return 0; // not filled in, don't check
 
   if (job.locationCountry) {
-    return profile.preferredCountries.includes(job.locationCountry) ? 0 : REGION_MISMATCH_PENALTY;
+    return job.locationCountry === profile.currentCountry ? 0 : LOCATION_INELIGIBLE_PENALTY;
   }
 
   if (job.eligibleRegions.length === 0) return 0; // no explicit restriction, treated as globally open
 
-  const preferredBuckets = profile.preferredCountries.map(mapCountryToRegionBucket);
-  const matched = preferredBuckets.some((bucket) => job.eligibleRegions.includes(bucket));
-  return matched ? 0 : REGION_MISMATCH_PENALTY;
+  const currentBucket = mapCountryToRegionBucket(profile.currentCountry);
+  return job.eligibleRegions.includes(currentBucket) ? 0 : LOCATION_INELIGIBLE_PENALTY;
 }
 
 // Exported for reuse by packages/ai/src/career/salary-range.ts — same "no
