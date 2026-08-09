@@ -4,9 +4,11 @@ export interface ProfileInput {
   skills: string[];
   experienceYears: number;
   preferredRoles: string[];
-  // ISO 3166-1 alpha-2 country codes — mapped to a RegionBucket at scoring
-  // time (see rule-score.ts's regionPenalty), not stored as a bucket.
-  preferredCountries: string[];
+  // ISO 3166-1 alpha-2 — where the user is actually based / has work
+  // authorization, not a preference. null = not filled in, don't check
+  // eligibility. Mapped to a RegionBucket at scoring time when needed (see
+  // rule-score.ts's regionPenalty), not stored as a bucket.
+  currentCountry: string | null;
   // Expected minimum annual salary (USD). null = no salary preference.
   expectedSalaryMin: number | null;
 }

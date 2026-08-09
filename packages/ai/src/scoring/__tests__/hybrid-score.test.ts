@@ -15,7 +15,7 @@ const profile = {
   skills: ['Node.js', 'TypeScript'],
   experienceYears: 6,
   preferredRoles: ['Backend Engineer'],
-  preferredCountries: [],
+  currentCountry: null,
   expectedSalaryMin: null,
 };
 const job = {
@@ -44,7 +44,7 @@ describe('scoreJob', () => {
       skills: [],
       experienceYears: 100,
       preferredRoles: [],
-      preferredCountries: [],
+      currentCountry: null,
       expectedSalaryMin: null,
     };
     const result = await scoreJob(lowProfile, job, { profile: lowA, job: lowB });
@@ -53,7 +53,7 @@ describe('scoreJob', () => {
     expect(mockCreate).not.toHaveBeenCalled();
   });
 
-  it('deducts the region mismatch penalty from rule_score but still computes embedding/LLM (ranking-only, not a veto)', async () => {
+  it('deducts the location ineligibility penalty from rule_score but still computes embedding/LLM (ranking-only, not a veto)', async () => {
     mockCreate.mockResolvedValue({
       choices: [
         {
@@ -69,7 +69,7 @@ describe('scoreJob', () => {
       ],
     });
     // US -> US bucket, see country-region-map.ts
-    const regionProfile = { ...profile, preferredCountries: ['US'] };
+    const regionProfile = { ...profile, currentCountry: 'US' };
     const restrictedJob = { ...job, eligibleRegions: ['EU'] as RegionBucket[] };
 
     const result = await scoreJob(regionProfile, restrictedJob, {
@@ -79,7 +79,7 @@ describe('scoreJob', () => {
 
     expect(mockCreate).toHaveBeenCalledTimes(1);
     expect(result.decision).not.toBe('SKIP');
-    expect(result.ruleScore).toBe(80); // 100 (full match) - 20 region mismatch penalty
+    expect(result.ruleScore).toBe(60); // 100 (full match) - 40 location ineligibility penalty
   });
 
   it('computes the weighted score using the LLM result when scores are high enough', async () => {

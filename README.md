@@ -20,6 +20,26 @@ what skills you're missing).
 
 ---
 
+## Screenshots
+
+|                                                                                                                                                                                                                        |                                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ![Dashboard](screenshots/dashboard.png) **Dashboard** — jobs scored against your profile, application status at a glance, and a live skill-gap breakdown against a target role.                                        | ![Job detail](screenshots/job-detail.png) **Job detail** — hybrid score broken into LLM / embedding / rule components, plus an AI-drafted outreach message for that specific role. |
+| ![Career Coach](screenshots/career-coach.png) **Career Coach** — a job scoring ≥ 90 triggers a real-time handoff from Opportunity Discovery; the coach proactively opens the conversation, and the timeline shows why. | ![Skill Market Intelligence](screenshots/skill-market.png) **Skill Market Intelligence** — skill demand ranking and a skill × role heatmap, computed from the live job pool.       |
+
+<details>
+<summary>Job list</summary>
+
+![Job list](screenshots/jobs-list.png)
+
+</details>
+
+All screenshots are from a demo account seeded with real, unedited output from the
+live scoring/Career Coach pipeline (not mocked copy) — see the [Live Demo](https://ai-job-market-intelligenceweb-production.up.railway.app)
+to try it yourself.
+
+---
+
 ## What is this?
 
 You paste your resume or link your GitHub, and the platform:

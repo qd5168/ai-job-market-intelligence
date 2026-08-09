@@ -60,8 +60,8 @@ enum ApplicationStatus {
 // Job-side only — AI Job Parsing's coarse-bucket output for a posting's
 // region restriction (Job.eligibleRegions; empty = no explicit restriction
 // found, treated as globally open, not "matches nothing"). Users don't pick
-// a bucket directly; UserProfile.preferredCountries stores their actual ISO
-// 3166-1 country codes, mapped to a bucket at scoring time via
+// a bucket directly; UserProfile.currentCountry stores their actual ISO
+// 3166-1 country code, mapped to a bucket at scoring time via
 // @ai-job-market-intelligence/shared/regions.
 enum RegionBucket {
   US
@@ -190,10 +190,11 @@ model UserProfile {
   skills             String[]
   experienceYears    Int                          @default(0) @map("experience_years")
   preferredRoles     String[]                     @map("preferred_roles")
-  // ISO 3166-1 alpha-2 codes, e.g. ["CN", "VN"] — empty = no region
-  // preference. Mapped to a RegionBucket at scoring time, see the
+  // ISO 3166-1 alpha-2 code — where the user is actually based / has work
+  // authorization, not a wishlist. null = not filled in, don't check.
+  // Mapped to a RegionBucket at scoring time when needed, see the
   // RegionBucket enum comment above.
-  preferredCountries String[]                     @default([]) @map("preferred_countries")
+  currentCountry     String?                      @map("current_country")
   // Expected minimum annual salary (USD), no currency conversion. null = no
   // salary preference. Compared against a job's normalized annual salary at
   // scoring time as a rule_score deduction.
@@ -355,7 +356,7 @@ model JobScore {
   llmScore       Float       @map("llm_score")
   embeddingScore Float       @map("embedding_score")
   ruleScore      Float       @map("rule_score")
-  scoringVersion String      @default("v3") @map("scoring_version")
+  scoringVersion String      @default("v4") @map("scoring_version")
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
