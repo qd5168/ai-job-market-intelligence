@@ -69,32 +69,53 @@ describe('runCareerCoachTurn', () => {
     expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ max_tokens: 5000 }));
   });
 
-  it('injects a job-context directive naming the exact jobId when one is provided', async () => {
+  it('prefetches get_job_context and injects the actual job facts into a directive, without asking the model to call it', async () => {
+    const executeTool = vi
+      .fn()
+      .mockResolvedValue({ title: 'Backend Engineer', company: 'Acme', role: 'BACKEND' });
     mockCreate.mockResolvedValue(textResponse('Here is a draft outreach message.'));
 
-    await runCareerCoachTurn(history, vi.fn(), 'job-123');
+    await runCareerCoachTurn(history, executeTool, 'job-123');
 
+    expect(executeTool).toHaveBeenCalledWith({
+      name: 'get_job_context',
+      arguments: { jobId: 'job-123' },
+    });
     const call = mockCreate.mock.calls[0]![0] as { messages: { role: string; content: string }[] };
     const directive = call.messages.find(
-      (m) => m.role === 'system' && m.content.includes('job-123'),
+      (m) => m.role === 'system' && m.content.includes('Backend Engineer'),
     );
     expect(directive).toBeDefined();
-    expect(directive!.content).toContain('get_job_context');
+    expect(directive!.content).toContain('Acme');
   });
 
   it('instructs the model to ask the outreach channel before drafting, with channel-specific formatting rules', async () => {
+    const executeTool = vi.fn().mockResolvedValue({ title: 'Backend Engineer', company: 'Acme' });
     mockCreate.mockResolvedValue(textResponse('Which channel would you like this for?'));
 
-    await runCareerCoachTurn(history, vi.fn(), 'job-123');
+    await runCareerCoachTurn(history, executeTool, 'job-123');
 
     const call = mockCreate.mock.calls[0]![0] as { messages: { role: string; content: string }[] };
     const directive = call.messages.find(
-      (m) => m.role === 'system' && m.content.includes('job-123'),
+      (m) => m.role === 'system' && m.content.includes('Backend Engineer'),
     );
     expect(directive!.content).toContain('ask which channel first');
     expect(directive!.content).toMatch(/500 characters/);
     expect(directive!.content).toMatch(/no markdown bullet/);
     expect(directive!.content).toMatch(/no placeholder contact-info block/);
+  });
+
+  it('does not inject a job-context directive when get_job_context returns an error', async () => {
+    const executeTool = vi
+      .fn()
+      .mockResolvedValue({ error: 'This job is not associated with the current user.' });
+    mockCreate.mockResolvedValue(textResponse('I could not find that job.'));
+
+    await runCareerCoachTurn(history, executeTool, 'job-123');
+
+    const call = mockCreate.mock.calls[0]![0] as { messages: { role: string; content: string }[] };
+    const systemMessages = call.messages.filter((m) => m.role === 'system');
+    expect(systemMessages).toHaveLength(1); // just CAREER_COACH_SYSTEM_PROMPT
   });
 
   it('does not inject any job-context directive when jobId is omitted', async () => {
