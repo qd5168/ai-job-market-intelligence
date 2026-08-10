@@ -48,6 +48,66 @@ describe('parseJobFields', () => {
     expect(result.confidence).toBe(0.9);
   });
 
+  it('truncates skills to 30 instead of rejecting the whole response over the count', async () => {
+    const skills = Array.from({ length: 40 }, (_, i) => `skill-${i}`);
+    mockCreate.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              role: 'Backend Engineer',
+              level: 'Senior',
+              skills,
+              salaryMin: null,
+              salaryMax: null,
+              remote: true,
+              eligibleRegions: ['US'],
+              confidence: 0.9,
+            }),
+          },
+        },
+      ],
+    });
+
+    const result = await parseJobFields({
+      title: 'Senior Backend Engineer',
+      description: 'Build our platform.',
+      tags: [],
+    });
+
+    expect(result.skills).toHaveLength(30);
+    expect(result.skills).toEqual(skills.slice(0, 30));
+  });
+
+  it('drops an eligibleRegions value the model invented instead of rejecting the whole response', async () => {
+    mockCreate.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              role: 'Backend Engineer',
+              level: 'Senior',
+              skills: ['node.js'],
+              salaryMin: null,
+              salaryMax: null,
+              remote: true,
+              eligibleRegions: ['US', 'EST'],
+              confidence: 0.9,
+            }),
+          },
+        },
+      ],
+    });
+
+    const result = await parseJobFields({
+      title: 'Senior Backend Engineer',
+      description: 'Build our platform.',
+      tags: [],
+    });
+
+    expect(result.eligibleRegions).toEqual(['US']);
+  });
+
   // The LLM's own eligibleRegions extraction is unreliable even when the
   // rest of the response is well-formed — this deterministic supplement
   // catches an explicit restriction the LLM missed rather than trusting an

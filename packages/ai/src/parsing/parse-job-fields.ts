@@ -16,11 +16,17 @@ const DEFAULT_LLM_MODEL = 'google/gemma-4-26b-a4b-it:free';
 
 const JobLevelSchema = z.enum(['Junior', 'Mid', 'Senior', 'Staff', 'Principal', 'Unknown']);
 const RegionBucketSchema = z.enum(['US', 'EU', 'UK', 'APAC', 'LATAM', 'REMOTE_GLOBAL', 'OTHER']);
+const MAX_SKILLS = 30;
+const MAX_ELIGIBLE_REGIONS = 7;
 
 const JobParseOutputSchema = z.object({
   role: z.string().max(100),
   level: JobLevelSchema,
-  skills: z.array(z.string()).max(30),
+  // Some models (observed with qwen3-30b-a3b-instruct-2507 as a paid
+  // fallback) extract more than MAX_SKILLS — truncate rather than reject
+  // the entire response over a count, matching the `remote` field's
+  // degrade-gracefully approach below instead of a hard .max() reject.
+  skills: z.array(z.string()).transform((arr) => arr.slice(0, MAX_SKILLS)),
   salaryMin: z.number().int().nullable(),
   salaryMax: z.number().int().nullable(),
   // Prompted as a plain boolean, but weaker free models return null when the
@@ -32,7 +38,18 @@ const JobParseOutputSchema = z.object({
     .boolean()
     .nullable()
     .transform((v) => v ?? false),
-  eligibleRegions: z.array(RegionBucketSchema).max(7),
+  // Same idea: some models invent a label that isn't one of our known
+  // buckets (observed: a raw timezone like "EST") — drop just that entry
+  // instead of rejecting the whole response over one bad array element.
+  eligibleRegions: z
+    .array(z.string())
+    .transform((arr) =>
+      arr
+        .filter(
+          (v): v is z.infer<typeof RegionBucketSchema> => RegionBucketSchema.safeParse(v).success,
+        )
+        .slice(0, MAX_ELIGIBLE_REGIONS),
+    ),
   confidence: z.number().min(0).max(1),
 });
 
