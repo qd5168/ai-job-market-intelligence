@@ -148,11 +148,10 @@ describe('runCareerCoachTurn', () => {
     expect(result).toBe(draft);
   });
 
-  it('does not clean the first (channel-asking) outreach turn even though jobId is unset by then', async () => {
-    // history alone (no jobId) already looks like a private-channel
-    // follow-up shape-wise, but this is the very first model call for
-    // this job (jobId provided) — the response here is the channel
-    // question, not a draft, so nothing should be stripped.
+  it('does not clean the first (channel-asking) outreach turn', async () => {
+    // No prior assistant reply in history yet — this is the very first
+    // model call for this job, so the response is the channel question,
+    // not a draft, and nothing should be stripped.
     mockCreate.mockResolvedValue(
       textResponse('Which channel — Email or LinkedIn?\n- Email\n- LinkedIn'),
     );

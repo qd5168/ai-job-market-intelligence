@@ -53,6 +53,16 @@ export function CareerCoachView() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const draftOutreachTriggered = useRef(false);
+  // get_job_context's tool-call result is never persisted to
+  // career_coach_messages (only the final text reply is saved), so a
+  // follow-up turn that reloads history from the server has lost it. Kept
+  // for exactly one follow-up turn beyond the auto-sent one — the user's
+  // channel answer — so that turn can re-send jobId and re-fetch context,
+  // instead of the model losing track of which job this conversation is
+  // about. Refs (not state) so the decrement takes effect synchronously
+  // within the same handleSend call, no stale-closure risk.
+  const outreachJobIdRef = useRef<string | undefined>(undefined);
+  const outreachTurnsRemainingRef = useRef(0);
 
   useEffect(() => {
     if (!hydrated && history) {
@@ -87,13 +97,18 @@ export function CareerCoachView() {
     remainingParams.delete('jobId');
     const query = remainingParams.toString();
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
-    void handleSend(t('draftOutreachMessage'), jobId);
+    outreachJobIdRef.current = jobId;
+    outreachTurnsRemainingRef.current = 2; // this auto-sent turn + the next follow-up
+    void handleSend(t('draftOutreachMessage'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, hydrated]);
 
-  async function handleSend(overrideContent?: string, jobId?: string) {
+  async function handleSend(overrideContent?: string) {
     const content = (overrideContent ?? input).trim();
     if (!content || isSending) return;
+
+    const jobId = outreachTurnsRemainingRef.current > 0 ? outreachJobIdRef.current : undefined;
+    if (outreachTurnsRemainingRef.current > 0) outreachTurnsRemainingRef.current -= 1;
 
     if (!overrideContent) setInput('');
     setError(null);
@@ -116,13 +131,15 @@ export function CareerCoachView() {
     } catch (err) {
       // Drop the empty ASSISTANT placeholder — no content ever arrived, so
       // showing a permanently-empty bubble reads as "still thinking". For
-      // the DraftOutreachButton auto-send (jobId set), also drop the USER
-      // bubble: it's canned text the user never typed, and route.ts never
-      // persisted it (the jobId ownership check runs before the message is
-      // saved) — keeping it visible would be a client-only ghost message
-      // with no server-side counterpart. A manually-typed message keeps its
-      // USER bubble so the user can see what they wrote and retry.
-      setMessages((prev) => prev.slice(0, jobId ? -2 : -1));
+      // the DraftOutreachButton auto-send (overrideContent set — jobId
+      // alone no longer distinguishes this, since it now also carries on
+      // the follow-up turn), also drop the USER bubble: it's canned text
+      // the user never typed, and route.ts never persisted it (the jobId
+      // ownership check runs before the message is saved) — keeping it
+      // visible would be a client-only ghost message with no server-side
+      // counterpart. A manually-typed message keeps its USER bubble so the
+      // user can see what they wrote and retry.
+      setMessages((prev) => prev.slice(0, overrideContent ? -2 : -1));
       if (err instanceof CareerCoachSendError && err.code === 'RATE_LIMITED') {
         setError('rateLimited');
       } else if (
@@ -146,6 +163,7 @@ export function CareerCoachView() {
       await clearCareerCoachHistory();
       setMessages([]);
       setError(null);
+      outreachTurnsRemainingRef.current = 0;
       queryClient.setQueryData(['career-coach-history'], []);
       setClearDialogOpen(false);
     } catch {
