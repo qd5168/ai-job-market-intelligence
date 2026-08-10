@@ -1,4 +1,4 @@
-import type { SalaryPeriod } from '@ai-job-market-intelligence/shared';
+import type { JobEligibility, SalaryPeriod } from '@ai-job-market-intelligence/shared';
 import { mapCountryToRegionBucket } from '@ai-job-market-intelligence/shared/regions';
 import type { JobInput, ProfileInput } from '../types';
 
@@ -7,7 +7,6 @@ const EXPERIENCE_CLOSE_SCORE = 25;
 const EXPERIENCE_NEAR_SCORE = 15;
 const EXPERIENCE_FAR_SCORE = 5;
 const ROLE_MATCH_SCORE = 15;
-const LOCATION_INELIGIBLE_PENALTY = 40;
 const SALARY_MISMATCH_PENALTY = 15;
 const HOURLY_HOURS_PER_YEAR = 2080;
 const MONTHS_PER_YEAR = 12;
@@ -66,40 +65,44 @@ function roleScore(preferredRoles: string[], title: string, tags: string[]): num
   return matched ? ROLE_MATCH_SCORE : 0;
 }
 
+// R4 (region eligibility) intentionally does not appear here — it's an
+// independent `eligibility` tag (see computeEligibility below), not a
+// rule_score deduction. See computeEligibility's comment for why.
 export function computeRuleScore(profile: ProfileInput, job: JobInput): number {
   const skillScore = matchSkillsScore(profile.skills, job);
   const expScore = experienceScore(profile.experienceYears, job.title);
   const role = roleScore(profile.preferredRoles, job.title, job.tags);
-  const raw =
-    skillScore + expScore + role - regionPenalty(profile, job) - salaryPenalty(profile, job);
+  const raw = skillScore + expScore + role - salaryPenalty(profile, job);
   return Math.round(Math.min(100, Math.max(0, raw)));
 }
 
-// R4 location eligibility: a ranking-only deduction, not a veto —
+// R4 location eligibility — an independent signal, not a score deduction.
 // currentCountry answers "can I actually do this job", an objective fact
 // (e.g. a posting requiring "Remote, from Europe" isn't reachable by a user
-// actually based in China), not a subjective preference. A mismatch still
-// gets scored normally and shown, just ranked lower — companies
-// occasionally make exceptions (visa sponsorship etc.), so a flat penalty is
-// enough to sort it down without fully hiding it. Two signals, most precise
-// first:
+// actually based in China), not a subjective preference — but folding it
+// into rule_score as a flat penalty conflated two different questions ("is
+// this a good match" vs. "can you take it") into one number, and dragged
+// rule_score toward 0 for region-restricted candidates regardless of how
+// well they otherwise matched. A strong match with an eligibility mismatch
+// should read as "high score + INELIGIBLE", not a mediocre score that looks
+// like a weak match. Two signals, most precise first:
 // 1. job.locationCountry — a single country deterministically parsed from
 //    the posting's own location text, compared directly against
 //    currentCountry with no bucket mapping involved.
 // 2. job.eligibleRegions — JD-derived region buckets, used when
 //    locationCountry couldn't resolve to exactly one country (e.g. generic
 //    "Remote", or multiple countries listed).
-export function regionPenalty(profile: ProfileInput, job: JobInput): number {
-  if (!profile.currentCountry) return 0; // not filled in, don't check
+export function computeEligibility(profile: ProfileInput, job: JobInput): JobEligibility {
+  if (!profile.currentCountry) return 'RESTRICTED'; // not filled in, can't judge
 
   if (job.locationCountry) {
-    return job.locationCountry === profile.currentCountry ? 0 : LOCATION_INELIGIBLE_PENALTY;
+    return job.locationCountry === profile.currentCountry ? 'ELIGIBLE' : 'INELIGIBLE';
   }
 
-  if (job.eligibleRegions.length === 0) return 0; // no explicit restriction, treated as globally open
+  if (job.eligibleRegions.length === 0) return 'RESTRICTED'; // no explicit signal either
 
   const currentBucket = mapCountryToRegionBucket(profile.currentCountry);
-  return job.eligibleRegions.includes(currentBucket) ? 0 : LOCATION_INELIGIBLE_PENALTY;
+  return job.eligibleRegions.includes(currentBucket) ? 'ELIGIBLE' : 'INELIGIBLE';
 }
 
 // Exported for reuse by packages/ai/src/career/salary-range.ts — same "no

@@ -238,6 +238,12 @@
       "OFFER": "Offer",
       "REJECTED": "Rejected",
       "WITHDRAWN": "Withdrawn"
+    },
+    "eligibility": {
+      "eligible": "ELIGIBLE",
+      "restricted": "RESTRICTED",
+      "ineligible": "INELIGIBLE",
+      "ineligibleHint": "Location eligibility mismatch"
     }
   },
   "jobDetail": {

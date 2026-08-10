@@ -49,6 +49,12 @@ enum JobDecision {
   SKIP
 }
 
+enum JobEligibility {
+  ELIGIBLE
+  RESTRICTED
+  INELIGIBLE
+}
+
 enum ApplicationStatus {
   APPLIED
   INTERVIEWING
@@ -345,20 +351,25 @@ model JobEmbedding {
 // ─── 评分（用户级） ───────────────────────────────────────
 
 model JobScore {
-  id             String      @id @default(cuid())
-  jobId          String      @map("job_id")
-  userId         String      @map("user_id")
+  id             String         @id @default(cuid())
+  jobId          String         @map("job_id")
+  userId         String         @map("user_id")
   score          Int
   decision       JobDecision
-  reasoning      String      @db.Text
-  strengths      String[]    @default([]) @map("strengths")
-  skillGap       String[]    @default([]) @map("skill_gap")
-  llmScore       Float       @map("llm_score")
-  embeddingScore Float       @map("embedding_score")
-  ruleScore      Float       @map("rule_score")
-  scoringVersion String      @default("v4") @map("scoring_version")
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @updatedAt @map("updated_at")
+  // Historical rows (written before this field existed) land on this
+  // default, which happens to match its intended meaning for them too:
+  // "eligibility unknown" for scores computed under the old fixed-penalty
+  // R4 that never recorded eligibility as its own signal.
+  eligibility    JobEligibility @default(RESTRICTED)
+  reasoning      String         @db.Text
+  strengths      String[]       @default([]) @map("strengths")
+  skillGap       String[]       @default([]) @map("skill_gap")
+  llmScore       Float          @map("llm_score")
+  embeddingScore Float          @map("embedding_score")
+  ruleScore      Float          @map("rule_score")
+  scoringVersion String         @default("v4.1") @map("scoring_version")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
 
   job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -366,6 +377,7 @@ model JobScore {
   @@unique([jobId, userId])
   @@index([userId, score(sort: Desc)])
   @@index([userId, decision])
+  @@index([userId, eligibility])
   @@map("job_scores")
 }
 

@@ -24,6 +24,7 @@ function makeScoreRow(overrides: { applications?: unknown[] } = {}) {
   return {
     score: 85,
     decision: 'APPLY',
+    eligibility: 'ELIGIBLE',
     reasoning: 'Great match',
     strengths: [],
     skillGap: [],
@@ -60,6 +61,15 @@ describe('GET /api/v1/jobs', () => {
 
     expect(res.status).toBe(401);
     expect(mockFindManyScores).not.toHaveBeenCalled();
+  });
+
+  it('includes the eligibility tag alongside decision in each score summary', async () => {
+    mockFindManyScores.mockResolvedValue([makeScoreRow()]);
+
+    const res = await GET(makeRequest());
+    const body = await res.json();
+
+    expect(body.data[0].score.eligibility).toBe('ELIGIBLE');
   });
 
   it('returns application: null when the user has not marked this job', async () => {

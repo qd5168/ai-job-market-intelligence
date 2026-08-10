@@ -4,6 +4,13 @@ import { PaginationQuerySchema, RegionBucketSchema } from './common';
 export const JobDecisionSchema = z.enum(['APPLY', 'MAYBE', 'SKIP']);
 export type JobDecision = z.infer<typeof JobDecisionSchema>;
 
+// Region eligibility signal — independent of `decision`, so a strong
+// skill/experience match with a region mismatch surfaces as "high score +
+// INELIGIBLE" instead of a single blended number that conflates match
+// quality with eligibility.
+export const JobEligibilitySchema = z.enum(['ELIGIBLE', 'RESTRICTED', 'INELIGIBLE']);
+export type JobEligibility = z.infer<typeof JobEligibilitySchema>;
+
 export const JobSourceSchema = z.enum(['REMOTEOK', 'GREENHOUSE', 'LEVER', 'ASHBY', 'HIMALAYAS']);
 export type JobSource = z.infer<typeof JobSourceSchema>;
 
@@ -71,6 +78,7 @@ export type JobListQuery = z.infer<typeof JobListQuerySchema>;
 export const JobScoreSummarySchema = z.object({
   value: z.number().int(),
   decision: JobDecisionSchema,
+  eligibility: JobEligibilitySchema,
   reasoning: z.string(),
   strengths: z.array(z.string()),
   skillGap: z.array(z.string()),

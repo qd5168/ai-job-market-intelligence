@@ -10,7 +10,8 @@ import {
   generateEmbedding,
   scoreJob,
   computeLLMScore,
-  combineFinalScore,
+  computeFinalScore,
+  getEmbeddingConfidence,
   toDecision,
   type ProfileInput,
   type JobInput,
@@ -135,6 +136,11 @@ async function reverifyHighScore(
   if (!secondSample) return false;
 
   const avgLlmScore = (result.llmScore + secondSample.score) / 2;
-  const verifiedScore = combineFinalScore(avgLlmScore, result.embeddingScore, result.ruleScore);
+  const verifiedScore = computeFinalScore(
+    avgLlmScore,
+    result.embeddingScore,
+    result.ruleScore,
+    getEmbeddingConfidence(),
+  );
   return verifiedScore >= AGENT_HANDOFF_SCORE_THRESHOLD;
 }
