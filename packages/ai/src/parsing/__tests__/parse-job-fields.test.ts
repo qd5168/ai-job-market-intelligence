@@ -153,7 +153,7 @@ describe('parseJobFields', () => {
     const originalFetch = global.fetch;
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ data: { limit_remaining: 5 } }),
+      json: async () => ({ data: { total_credits: 10, total_usage: 5 } }),
     }) as unknown as typeof fetch;
 
     mockCreate
