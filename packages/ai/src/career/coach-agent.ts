@@ -243,14 +243,19 @@ export async function runCareerCoachTurn(
       const content = message.content ?? (message as { reasoning?: string }).reasoning;
       if (!content) throw new Error('Career Coach returned empty response');
 
-      // jobId is only carried on the auto-sent first turn (see
-      // buildJobContextDirective) — a follow-up turn without it, in a
-      // conversation that started from DraftOutreachButton, whose latest
-      // user message didn't name email, is the private-channel draft
-      // itself rather than the channel question or an email draft.
+      // Deliberately not keyed off `jobId` — the caller now resends it for
+      // one follow-up turn too (so get_job_context can be re-fetched; its
+      // result isn't persisted across turns), so jobId alone no longer
+      // tells first turn apart from the next one. A prior assistant reply
+      // in an outreach conversation whose latest user message didn't name
+      // email means this is the private-channel draft itself, not the
+      // channel question (which has no prior assistant reply yet) or an
+      // email draft.
       const lastUserMessage = [...history].reverse().find((m) => m.role === 'user')?.content ?? '';
       const isPrivateChannelDraft =
-        !jobId && isOutreachConversation(history) && !mentionsEmailChannel(lastUserMessage);
+        isOutreachConversation(history) &&
+        history.some((m) => m.role === 'assistant') &&
+        !mentionsEmailChannel(lastUserMessage);
 
       return isPrivateChannelDraft ? cleanPrivateChannelDraft(content) : content;
     }
