@@ -92,15 +92,25 @@ Rules:
 - Never invent a specific contact person's name — this product has no recruiter/contact data at all. If drafting an outreach message that would normally open with a name, use a generic placeholder like "Hiring Team" instead, and don't claim to know who to send it to.`;
 
 // Injected only for this turn when the request carries a jobId (see
-// CareerCoachSendMessageSchema) — tells the model exactly which job to fetch
-// instead of leaving it to infer one from the chat text, which is the whole
-// point of routing DraftOutreachButton through jobId rather than free text.
+// CareerCoachSendMessageSchema) and get_job_context successfully resolved
+// it — grounds the model with the actual job facts directly instead of
+// instructing it to call get_job_context itself. Letting the model decide
+// whether/when to call the tool proved unreliable in production: it would
+// sometimes ask the user which job they meant (echoing an unrelated job
+// from earlier in the conversation) instead of trusting the injected jobId,
+// and forcing the call via `tool_choice` isn't a portable fix either — some
+// reasoning models reject a forced tool_choice outright while in "thinking
+// mode". Fetching eagerly removes the model's discretion (and an extra
+// round-trip) entirely, the same way cleanPrivateChannelDraft stopped
+// relying on the model to self-format a private-channel draft.
+//
 // Also carries the outreach-channel rules: an email-shaped draft (markdown
 // bullets, a placeholder contact-info sign-off block) doesn't paste cleanly
 // into a LinkedIn-style DM box, so the model must ask which channel before
 // drafting anything rather than defaulting to an email body.
-function buildJobContextDirective(jobId: string): string {
-  return `The user is asking about a specific job (jobId: "${jobId}"). Call get_job_context with jobId="${jobId}" before answering, then use the returned title/company/role/strengths/reasoning to help with their request (e.g. drafting an outreach message). Do not call get_job_context with any other jobId.
+function buildJobContextDirective(jobContext: unknown): string {
+  return `The user is asking about this specific job — use the facts below, don't ask the user which job they mean or call get_job_context yourself, even if the conversation earlier discussed a different job:
+${JSON.stringify(jobContext)}
 
 If this is a request to draft an outreach/networking message and the user hasn't already told you which channel (email vs. a private-message channel like LinkedIn), ask which channel first instead of drafting anything yet. Once you know, tailor the draft to it:
 - Email: no hard character limit — keep it professional and concise, roughly 150-250 words.
@@ -196,9 +206,20 @@ export async function runCareerCoachTurn(
   const client = getOpenRouterClient();
   const model = process.env.CAREER_COACH_MODEL ?? DEFAULT_CAREER_COACH_MODEL;
 
+  const jobContext = jobId
+    ? await executeTool({ name: 'get_job_context', arguments: { jobId } })
+    : undefined;
+  const hasJobContext =
+    jobContext !== undefined &&
+    jobContext !== null &&
+    typeof jobContext === 'object' &&
+    !('error' in jobContext);
+
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: 'system', content: CAREER_COACH_SYSTEM_PROMPT },
-    ...(jobId ? [{ role: 'system' as const, content: buildJobContextDirective(jobId) }] : []),
+    ...(hasJobContext
+      ? [{ role: 'system' as const, content: buildJobContextDirective(jobContext) }]
+      : []),
     ...history.map((m): OpenAI.Chat.ChatCompletionMessageParam => ({
       role: m.role,
       content: m.content,
