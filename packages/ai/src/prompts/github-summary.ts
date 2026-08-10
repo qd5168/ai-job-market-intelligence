@@ -5,7 +5,9 @@ Return strict JSON matching this schema:
   "summary": string
 }
 
-Base the summary only on the repository information given. Do not speculate about skills not evidenced in the repos.`;
+Base the summary only on the repository information given. Do not speculate about skills not evidenced in the repos.
+
+Respond with the JSON object only. Do not include any preamble, explanation, or commentary before or after it.`;
 
 interface GithubRepoContext {
   name: string;

@@ -16,4 +16,6 @@ Scoring guidelines:
 - 25-49: Weak match, major gaps
 - 0-24: Poor match, fundamentally different role
 
-Be honest and specific. Reference actual skills from both profile and job.`;
+Be honest and specific. Reference actual skills from both profile and job.
+
+Respond with the JSON object only. Do not include any preamble, explanation, or commentary before or after it.`;

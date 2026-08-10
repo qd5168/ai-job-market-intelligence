@@ -11,4 +11,8 @@
 // replaced by a health-aware gate (see embedding-health.ts) after a
 // production incident where a systemically low embedding score caused
 // 97.8% of scores to skip the LLM call entirely.
-export const CURRENT_SCORING_VERSION = 'v4.1';
+// v4.2: Recalibrated computeEmbeddingScore's similarity-to-0-100 mapping
+// (see embeddings/similarity.ts) — the prior 0.3-0.9 assumption didn't
+// match the embedding model actually in use, which had been pinning ~94%
+// of embeddingScores near 0 and permanently tripping the v4.1 health gate.
+export const CURRENT_SCORING_VERSION = 'v4.2';

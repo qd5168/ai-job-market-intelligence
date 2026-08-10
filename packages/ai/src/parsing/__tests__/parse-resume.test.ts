@@ -39,6 +39,32 @@ describe('parseResumeFields', () => {
     });
   });
 
+  it('recovers a JSON object embedded in a chatty LLM response', async () => {
+    mockCreate.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content:
+              "Here's a thorough analysis of the resume:\n\n" +
+              JSON.stringify({
+                skills: ['Python', 'Django'],
+                experienceYears: 4,
+                summary: 'Backend engineer with Python experience.',
+              }),
+          },
+        },
+      ],
+    });
+
+    const result = await parseResumeFields('resume text here');
+
+    expect(result).toEqual({
+      skills: ['Python', 'Django'],
+      experienceYears: 4,
+      summary: 'Backend engineer with Python experience.',
+    });
+  });
+
   it('returns null after two failed attempts instead of throwing', async () => {
     mockCreate.mockRejectedValue(new Error('down'));
 
