@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { Octokit } from '@octokit/rest';
 import { getOpenRouterClient } from '../openrouter-client';
+import { parseLLMJson } from '../parse-llm-json';
 import {
   GITHUB_SUMMARY_SYSTEM_PROMPT,
   buildGithubSummaryUserPrompt,
@@ -44,7 +45,10 @@ async function callLLM(
   const response = await getOpenRouterClient().chat.completions.create({
     model,
     temperature: 0.3,
-    max_tokens: 400,
+    // Headroom for qwen3.7-flash (paid fallback), which ignores
+    // response_format and opens with unprompted commentary — see
+    // parse-llm-json.ts and llm-score.ts's callLLM for the same issue.
+    max_tokens: 800,
     response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: GITHUB_SUMMARY_SYSTEM_PROMPT },
@@ -55,7 +59,7 @@ async function callLLM(
   const content = response.choices[0]?.message.content;
   if (!content) throw new Error('LLM returned empty response');
 
-  return GithubSummaryOutputSchema.parse(JSON.parse(content)).summary;
+  return GithubSummaryOutputSchema.parse(parseLLMJson(content)).summary;
 }
 
 // Returns null when the free model (and, if configured and within budget,

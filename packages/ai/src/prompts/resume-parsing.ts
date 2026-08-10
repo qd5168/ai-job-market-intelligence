@@ -7,7 +7,9 @@ Return strict JSON matching this schema:
   "summary": string          // 2-4 sentence neutral summary of the candidate's background and notable projects
 }
 
-Only extract what is explicitly present or reasonably inferable from the text. Do not invent skills or experience that aren't supported by the resume content.`;
+Only extract what is explicitly present or reasonably inferable from the text. Do not invent skills or experience that aren't supported by the resume content.
+
+Respond with the JSON object only. Do not include any preamble, explanation, or commentary before or after it.`;
 
 export function buildResumeParsingUserPrompt(resumeText: string): string {
   return `Resume text:\n\n${resumeText.slice(0, 15_000)}`;

@@ -60,8 +60,12 @@ async function callLLM(model: string, input: ParseJobFieldsInput): Promise<Parse
     // gpt-oss-20b is a reasoning model: with a tight token budget it can burn
     // the whole budget on chain-of-thought and return empty `content`.
     // reasoning_effort caps that spend, and the higher max_tokens leaves
-    // headroom for the final JSON after reasoning.
-    max_tokens: 1000,
+    // headroom for the final JSON after reasoning. Also needs headroom for
+    // qwen3.7-flash (paid fallback), which ignores response_format and
+    // opens with unprompted commentary ("Here's a thorough analysis...")
+    // that was getting truncated before any JSON ever appeared — see
+    // parse-llm-json.ts.
+    max_tokens: 2000,
     reasoning_effort: 'low',
     response_format: { type: 'json_object' },
     messages: [
