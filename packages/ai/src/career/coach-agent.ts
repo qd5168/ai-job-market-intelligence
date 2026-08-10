@@ -95,8 +95,16 @@ Rules:
 // CareerCoachSendMessageSchema) — tells the model exactly which job to fetch
 // instead of leaving it to infer one from the chat text, which is the whole
 // point of routing DraftOutreachButton through jobId rather than free text.
+// Also carries the outreach-channel rules: an email-shaped draft (markdown
+// bullets, a placeholder contact-info sign-off block) doesn't paste cleanly
+// into a LinkedIn-style DM box, so the model must ask which channel before
+// drafting anything rather than defaulting to an email body.
 function buildJobContextDirective(jobId: string): string {
-  return `The user is asking about a specific job (jobId: "${jobId}"). Call get_job_context with jobId="${jobId}" before answering, then use the returned title/company/role/strengths/reasoning to help with their request (e.g. drafting an outreach message). Do not call get_job_context with any other jobId.`;
+  return `The user is asking about a specific job (jobId: "${jobId}"). Call get_job_context with jobId="${jobId}" before answering, then use the returned title/company/role/strengths/reasoning to help with their request (e.g. drafting an outreach message). Do not call get_job_context with any other jobId.
+
+If this is a request to draft an outreach/networking message and the user hasn't already told you which channel (email vs. a private-message channel like LinkedIn), ask which channel first instead of drafting anything yet. Once you know, tailor the draft to it:
+- Email: no hard character limit — keep it professional and concise, roughly 150-250 words.
+- A private-message channel (LinkedIn or similar): no markdown bullet points, and no placeholder contact-info block (name/LinkedIn/GitHub/phone) at the end — that belongs in an email signature, not a DM. Target 500 characters or fewer including any sign-off, unless the user states a specific platform's actual character limit — then use the number they gave you instead of the 500 default.`;
 }
 
 export interface CareerCoachMessage {

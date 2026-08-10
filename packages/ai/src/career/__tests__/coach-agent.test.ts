@@ -82,6 +82,21 @@ describe('runCareerCoachTurn', () => {
     expect(directive!.content).toContain('get_job_context');
   });
 
+  it('instructs the model to ask the outreach channel before drafting, with channel-specific formatting rules', async () => {
+    mockCreate.mockResolvedValue(textResponse('Which channel would you like this for?'));
+
+    await runCareerCoachTurn(history, vi.fn(), 'job-123');
+
+    const call = mockCreate.mock.calls[0]![0] as { messages: { role: string; content: string }[] };
+    const directive = call.messages.find(
+      (m) => m.role === 'system' && m.content.includes('job-123'),
+    );
+    expect(directive!.content).toContain('ask which channel first');
+    expect(directive!.content).toMatch(/500 characters/);
+    expect(directive!.content).toMatch(/no markdown bullet/);
+    expect(directive!.content).toMatch(/no placeholder contact-info block/);
+  });
+
   it('does not inject any job-context directive when jobId is omitted', async () => {
     mockCreate.mockResolvedValue(textResponse('Hi, how can I help with your career?'));
 
