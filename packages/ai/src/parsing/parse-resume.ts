@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { PDFParse } from 'pdf-parse';
 import { getOpenRouterClient } from '../openrouter-client';
+import { parseLLMJson } from '../parse-llm-json';
 import {
   RESUME_PARSING_SYSTEM_PROMPT,
   buildResumeParsingUserPrompt,
@@ -39,7 +40,10 @@ async function callLLM(model: string, resumeText: string): Promise<ResumeParseRe
   const response = await getOpenRouterClient().chat.completions.create({
     model,
     temperature: 0.2,
-    max_tokens: 600,
+    // Headroom for qwen3.7-flash (paid fallback), which ignores
+    // response_format and opens with unprompted commentary — see
+    // parse-llm-json.ts and llm-score.ts's callLLM for the same issue.
+    max_tokens: 1200,
     response_format: { type: 'json_object' },
     messages: [
       { role: 'system', content: RESUME_PARSING_SYSTEM_PROMPT },
@@ -50,7 +54,7 @@ async function callLLM(model: string, resumeText: string): Promise<ResumeParseRe
   const content = response.choices[0]?.message.content;
   if (!content) throw new Error('LLM returned empty response');
 
-  return ResumeParseOutputSchema.parse(JSON.parse(content));
+  return ResumeParseOutputSchema.parse(parseLLMJson(content));
 }
 
 // Returns null when the free model (and, if configured and within budget,

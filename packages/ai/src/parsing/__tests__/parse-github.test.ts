@@ -57,6 +57,24 @@ describe('fetchGithubProfile', () => {
     expect(result?.summary).toBe('Strong TypeScript background.');
   });
 
+  it('recovers a JSON object embedded in a chatty LLM response', async () => {
+    mockCreate.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content:
+              "Here's a thorough analysis of this GitHub profile:\n\n" +
+              JSON.stringify({ summary: 'Strong TypeScript background.' }),
+          },
+        },
+      ],
+    });
+
+    const result = await fetchGithubProfile('someuser');
+
+    expect(result?.summary).toBe('Strong TypeScript background.');
+  });
+
   it('returns a null summary (not an error) when the free model fails and no fallback is configured', async () => {
     mockCreate.mockRejectedValue(new Error('down'));
 
