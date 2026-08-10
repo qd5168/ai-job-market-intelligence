@@ -107,6 +107,75 @@ describe('runCareerCoachTurn', () => {
     expect(systemMessages).toHaveLength(1); // just CAREER_COACH_SYSTEM_PROMPT
   });
 
+  it('strips markdown bullets, separators, and bracketed placeholders from a private-channel outreach draft', async () => {
+    const outreachHistory: CareerCoachMessage[] = [
+      { role: 'user', content: 'Help me draft an outreach/networking message for this job.' },
+      { role: 'assistant', content: 'Which channel would you like — email or LinkedIn?' },
+      { role: 'user', content: 'LinkedIn' },
+    ];
+    mockCreate.mockResolvedValue(
+      textResponse(
+        'Hi Hiring Team,\n\n' +
+          '- I have strong backend experience.\n' +
+          '- I am excited about this role.\n\n' +
+          '***\n\n' +
+          'Best,\n[Your Name]\n[Link to your Portfolio/GitHub]',
+      ),
+    );
+
+    // No jobId on this follow-up turn, matching how the real app only
+    // carries jobId on the auto-sent first message.
+    const result = await runCareerCoachTurn(outreachHistory, vi.fn());
+
+    expect(result).not.toMatch(/^\s*[-*]/m);
+    expect(result).not.toContain('***');
+    expect(result).not.toContain('[Your Name]');
+    expect(result).not.toContain('[Link to your Portfolio/GitHub]');
+    expect(result).toContain('I have strong backend experience.');
+  });
+
+  it('does not clean an email-channel outreach draft (markdown/placeholders are fine there)', async () => {
+    const outreachHistory: CareerCoachMessage[] = [
+      { role: 'user', content: 'Help me draft an outreach/networking message for this job.' },
+      { role: 'assistant', content: 'Which channel would you like — email or LinkedIn?' },
+      { role: 'user', content: 'Email' },
+    ];
+    const draft = '- Strong backend experience.\n\nBest,\n[Your Name]';
+    mockCreate.mockResolvedValue(textResponse(draft));
+
+    const result = await runCareerCoachTurn(outreachHistory, vi.fn());
+
+    expect(result).toBe(draft);
+  });
+
+  it('does not clean the first (channel-asking) outreach turn even though jobId is unset by then', async () => {
+    // history alone (no jobId) already looks like a private-channel
+    // follow-up shape-wise, but this is the very first model call for
+    // this job (jobId provided) — the response here is the channel
+    // question, not a draft, so nothing should be stripped.
+    mockCreate.mockResolvedValue(
+      textResponse('Which channel — Email or LinkedIn?\n- Email\n- LinkedIn'),
+    );
+
+    const result = await runCareerCoachTurn(
+      [{ role: 'user', content: 'Help me draft an outreach/networking message for this job.' }],
+      vi.fn(),
+      'job-123',
+    );
+
+    expect(result).toContain('- Email');
+  });
+
+  it('does not clean a normal (non-outreach) conversation response', async () => {
+    mockCreate.mockResolvedValue(
+      textResponse('Here are 2 career paths:\n- Backend Engineer\n- Platform Engineer'),
+    );
+
+    const result = await runCareerCoachTurn(history, vi.fn());
+
+    expect(result).toContain('- Backend Engineer');
+  });
+
   it('executes the requested tool and feeds the result back for the final answer', async () => {
     const executeTool = vi.fn().mockResolvedValue({ min: 90000, max: 150000, median: 120000 });
     mockCreate

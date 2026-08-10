@@ -144,6 +144,42 @@ function parseToolArguments(raw: string): Record<string, unknown> {
   }
 }
 
+// Verbatim copies of DraftOutreachButton's auto-sent first message (see
+// apps/web/messages/{en,zh}.json's draftOutreachMessage) — checked as
+// plain strings rather than imported, since packages/ai has no
+// dependency on apps/web's i18n messages.
+const DRAFT_OUTREACH_TRIGGERS = [
+  'Help me draft an outreach/networking message for this job.',
+  '帮我针对这个职位写一份主动联系（outreach）文案。',
+];
+
+function isOutreachConversation(history: CareerCoachMessage[]): boolean {
+  return history.some((m) => DRAFT_OUTREACH_TRIGGERS.includes(m.content));
+}
+
+function mentionsEmailChannel(text: string): boolean {
+  return /\bemail\b|邮件/i.test(text);
+}
+
+// Free-tier models don't reliably follow buildJobContextDirective's "no
+// markdown bullets, no placeholder contact block" instruction for a
+// private-message-channel draft — observed in practice producing bullet
+// lists, "***" separators, and a bracketed placeholder sign-off despite
+// being told not to. This is exactly the text a user copy-pastes straight
+// into a LinkedIn message box, so strip those deterministically rather
+// than relying purely on prompt compliance.
+function cleanPrivateChannelDraft(text: string): string {
+  return text
+    .replace(/^[ \t]*[-*_]{3,}[ \t]*$/gm, '') // horizontal-rule separators
+    .replace(/^[ \t]*[-*]\s+/gm, '') // bullet markers (keeps the text after them)
+    .replace(/\[(?:Your|Insert|Add|Link to)\b[^\]]*\]/gi, '') // bracketed placeholders
+    .replace(/\n{3,}/g, '\n\n') // collapse blank lines left behind by the above
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .join('\n')
+    .trim();
+}
+
 // Tool execution needs DB access, which packages/ai deliberately doesn't
 // have — the caller (apps/web) supplies executeTool, scoped to the
 // requesting user. Not streamed: this runs the full tool-calling loop to a
@@ -206,7 +242,17 @@ export async function runCareerCoachTurn(
     if (!message.tool_calls || message.tool_calls.length === 0) {
       const content = message.content ?? (message as { reasoning?: string }).reasoning;
       if (!content) throw new Error('Career Coach returned empty response');
-      return content;
+
+      // jobId is only carried on the auto-sent first turn (see
+      // buildJobContextDirective) — a follow-up turn without it, in a
+      // conversation that started from DraftOutreachButton, whose latest
+      // user message didn't name email, is the private-channel draft
+      // itself rather than the channel question or an email draft.
+      const lastUserMessage = [...history].reverse().find((m) => m.role === 'user')?.content ?? '';
+      const isPrivateChannelDraft =
+        !jobId && isOutreachConversation(history) && !mentionsEmailChannel(lastUserMessage);
+
+      return isPrivateChannelDraft ? cleanPrivateChannelDraft(content) : content;
     }
 
     messages.push(message);
