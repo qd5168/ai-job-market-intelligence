@@ -114,7 +114,7 @@ export async function scoreJob(
     const finalScore = computeFinalScore(ruleScore, embeddingScore, ruleScore, embeddingConfidence);
     return {
       score: finalScore,
-      decision: toDecision(finalScore),
+      decision: toDecision(finalScore, eligibility),
       eligibility,
       reasoning:
         'AI analysis temporarily unavailable. Score based on skill and experience matching.',
@@ -136,7 +136,7 @@ export async function scoreJob(
 
   return {
     score: finalScore,
-    decision: toDecision(finalScore),
+    decision: toDecision(finalScore, eligibility),
     eligibility,
     reasoning: llmResult.reasoning,
     strengths: llmResult.strengths,

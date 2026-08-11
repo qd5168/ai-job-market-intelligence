@@ -276,5 +276,21 @@ describe('processScoringMatch', () => {
         expect.objectContaining({ create: expect.objectContaining({ score: 92 }) }),
       );
     });
+
+    // The smoothing step recomputes `decision` from the blended score
+    // (ai-scoring.md §2.2) — this must still go through the INELIGIBLE
+    // override, not just re-derive decision from the score threshold alone.
+    it('keeps decision overridden to SKIP after smoothing when eligibility is INELIGIBLE', async () => {
+      mockScoreJob.mockResolvedValue({ ...scoringResult, eligibility: 'INELIGIBLE' });
+      mockFindScore.mockResolvedValue({ id: 'existing-score', score: 50 });
+
+      await processScoringMatch(makeJob({ jobId: 'job-1', userId: 'user-1' }));
+
+      expect(mockUpsertScore).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({ score: 79, decision: 'SKIP' }),
+        }),
+      );
+    });
   });
 });

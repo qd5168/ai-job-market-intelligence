@@ -240,10 +240,7 @@
       "WITHDRAWN": "Withdrawn"
     },
     "eligibility": {
-      "eligible": "ELIGIBLE",
-      "restricted": "RESTRICTED",
-      "ineligible": "INELIGIBLE",
-      "ineligibleHint": "Location eligibility mismatch"
+      "skipOverrideHint": "Marked Skip due to location eligibility, not match quality"
     }
   },
   "jobDetail": {

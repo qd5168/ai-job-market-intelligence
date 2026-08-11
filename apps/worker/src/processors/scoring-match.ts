@@ -80,7 +80,7 @@ export async function processScoringMatch(job: Job<ScoringMatchPayload>): Promis
   const score = existingScore
     ? Math.round(SMOOTHING_NEW_WEIGHT * result.score + SMOOTHING_OLD_WEIGHT * existingScore.score)
     : result.score;
-  const decision = toDecision(score);
+  const decision = toDecision(score, result.eligibility);
 
   await prisma.jobScore.upsert({
     where: { jobId_userId: { jobId, userId } },
