@@ -240,10 +240,7 @@
       "WITHDRAWN": "已撤回"
     },
     "eligibility": {
-      "eligible": "地区符合",
-      "restricted": "地区未知",
-      "ineligible": "地区不符",
-      "ineligibleHint": "地区资格不匹配"
+      "skipOverrideHint": "因地区资格不符被判定为不合适，与匹配质量无关"
     }
   },
   "jobDetail": {

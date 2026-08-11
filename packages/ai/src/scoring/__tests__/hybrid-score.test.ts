@@ -190,6 +190,35 @@ describe('scoreJob', () => {
     expect(result.ruleScore).toBe(100); // full skill/exp/role match, no region deduction
   });
 
+  it('overrides decision to SKIP when eligibility is INELIGIBLE even though the LLM was called and score is high', async () => {
+    mockCreate.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              score: 95,
+              reasoning: 'Excellent match.',
+              strengths: [],
+              skill_gap: [],
+            }),
+          },
+        },
+      ],
+    });
+    const regionProfile = { ...profile, currentCountry: 'US' };
+    const restrictedJob = { ...job, eligibleRegions: ['EU'] as RegionBucket[] };
+
+    const result = await scoreJob(regionProfile, restrictedJob, {
+      profile: similarEmbedding,
+      job: similarEmbedding,
+    });
+
+    // score keeps reflecting real match quality; only decision is overridden
+    expect(result.score).toBeGreaterThanOrEqual(75);
+    expect(result.eligibility).toBe('INELIGIBLE');
+    expect(result.decision).toBe('SKIP');
+  });
+
   it('uses the default weights (embedding healthy) when computing the final blended score', async () => {
     mockCreate.mockResolvedValue({
       choices: [
