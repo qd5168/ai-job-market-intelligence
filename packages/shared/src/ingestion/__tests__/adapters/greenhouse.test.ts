@@ -39,4 +39,23 @@ describe('greenhouseAdapter.normalize', () => {
     const raw = { company: 'acme', job: { ...validRaw.job, content: '<p>short</p>' } };
     expect(greenhouseAdapter.normalize(raw)).toBeNull();
   });
+
+  // Observed in production: some postings' `content` comes back HTML-entity
+  // escaped one level too many (&lt;p&gt; instead of <p>) — stripHtml() alone
+  // decodes the entities as plain text but never recognizes the result as
+  // real tag structure, so the tags leak straight into the stored
+  // description instead of being stripped.
+  it('strips HTML that arrives HTML-entity-escaped one level too many', () => {
+    const raw = {
+      company: 'acme',
+      job: {
+        ...validRaw.job,
+        content: `&lt;p&gt;${'Build our payments platform in Node.js and TypeScript. '.repeat(3)}&lt;/p&gt;`,
+      },
+    };
+    const result = greenhouseAdapter.normalize(raw);
+    expect(result?.description).not.toContain('<p>');
+    expect(result?.description).not.toContain('&lt;');
+    expect(result?.description).toContain('Build our payments platform');
+  });
 });
