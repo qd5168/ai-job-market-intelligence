@@ -1,3 +1,4 @@
+import { decodeHTML } from 'entities';
 import { stripHtml } from '../../utils/strip-html';
 import { IngestionError } from '../errors';
 import type { JobSourceAdapter, NormalizedJob } from '../types';
@@ -26,13 +27,19 @@ interface GreenhouseFetchResult {
 async function fetchGreenhouse(companySlug?: string): Promise<GreenhouseFetchResult[]> {
   if (!companySlug) return [];
 
-  const res = await fetch(`https://boards-api.greenhouse.io/v1/boards/${companySlug}/jobs?content=true`, {
-    headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(30_000),
-  });
+  const res = await fetch(
+    `https://boards-api.greenhouse.io/v1/boards/${companySlug}/jobs?content=true`,
+    {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(30_000),
+    },
+  );
 
   if (!res.ok) {
-    if (res.status >= 500) throw new IngestionError(`Greenhouse API returned ${res.status} for ${companySlug}`, { retryable: true });
+    if (res.status >= 500)
+      throw new IngestionError(`Greenhouse API returned ${res.status} for ${companySlug}`, {
+        retryable: true,
+      });
     return []; // 404 etc — the caller tracks company validity via probeOfficialApi, not this
   }
 
@@ -44,7 +51,17 @@ function normalizeGreenhouseJob(raw: GreenhouseFetchResult): NormalizedJob | nul
   const { company, job } = raw;
   if (!job?.id || !job.title?.trim()) return null;
 
-  const description = stripHtml(job.content ?? '');
+  // For a subset of postings (varies per-job, not per-company — depends on
+  // how that specific listing's content was authored in Greenhouse's rich
+  // text editor), `content` comes back HTML-entity-escaped one level too
+  // many, e.g. `&lt;p&gt;...&lt;/p&gt;` instead of `<p>...</p>`. Fed straight
+  // into stripHtml(), that escaped markup is parsed as plain text — the
+  // HTML parser still decodes the entities (producing literal `<p>` in the
+  // output), but never recognizes it as real tag structure, so nothing
+  // actually gets stripped and the tags leak into the stored description.
+  // Decoding once here first is a no-op for the normal (already-real-HTML)
+  // case and fixes the escaped case.
+  const description = stripHtml(decodeHTML(job.content ?? ''));
   if (description.length < MIN_DESCRIPTION_LENGTH) return null;
 
   return {
