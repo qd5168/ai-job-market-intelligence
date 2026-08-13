@@ -9,6 +9,7 @@ export const QUEUE_NAMES = {
   CAREER_AGENT_DAILY: 'career_agent_daily',
   CAREER_BRIEF_GENERATE: 'career_brief_generate',
   AGENT_HANDOFF: 'agent_handoff',
+  DATA_RETENTION_CLEANUP: 'data_retention_cleanup',
 } as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

@@ -46,3 +46,8 @@ export {
   AGENT_HANDOFF_JOB_OPTS,
   type AgentHandoffPayload,
 } from './agent-handoff';
+export {
+  getDataRetentionCleanupQueue,
+  DATA_RETENTION_CLEANUP_JOB_OPTS,
+  type DataRetentionCleanupPayload,
+} from './data-retention-cleanup';
