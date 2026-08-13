@@ -15,6 +15,7 @@ import { processSkillTrendAggregate } from './processors/skill-trend-aggregate.j
 import { processCareerAgentDaily } from './processors/career-agent-daily.js';
 import { processCareerBriefGenerate } from './processors/career-brief-generate.js';
 import { processAgentHandoff } from './processors/agent-handoff.js';
+import { processDataRetentionCleanup } from './processors/data-retention-cleanup.js';
 import { setupCronJobs } from './queues/setup-cron.js';
 
 const port = Number(process.env.PORT ?? 3001);
@@ -72,6 +73,10 @@ const workers = [
     concurrency: 5,
   }),
   new Worker(QUEUE_NAMES.AGENT_HANDOFF, processAgentHandoff, { connection, concurrency: 3 }),
+  new Worker(QUEUE_NAMES.DATA_RETENTION_CLEANUP, processDataRetentionCleanup, {
+    connection,
+    concurrency: 1,
+  }),
 ];
 
 workers.forEach((w) => {
