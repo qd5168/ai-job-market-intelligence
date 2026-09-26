@@ -19,7 +19,7 @@
     "ioredis": "^5.4.1",
     "pino": "^9.5.0",
     "resend": "^6.18.1",
-    "tsx": "^4.19.2"
+    "tsx": "^4.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",
