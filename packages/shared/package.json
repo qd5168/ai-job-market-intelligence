@@ -24,7 +24,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "bullmq": "^5.81.2",
+    "bullmq": "^5.81.3",
     "entities": "^8.0.0",
     "fast-xml-parser": "^5.10.1",
     "html-to-text": "^10.0.0",
